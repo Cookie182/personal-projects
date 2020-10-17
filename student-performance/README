@@ -5,3 +5,5 @@ In the end a model was made that would predict if the students have or have no t
 2 models were developed, a K nearest neighbors model and a model using logistic regression.
 
 All the results from messing with the database, graphs and the learning models are shown in the notebook and taked about for a bit.
+
+nbviewer of the notebook: https://nbviewer.jupyter.org/github/Cookie182/personal-projects/blob/main/student-performance/student_performance.ipynb
