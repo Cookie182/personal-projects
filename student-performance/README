@@ -1,0 +1,9 @@
+Extracted data from the excel file in the same folder here and tried to find trends and relationships between different factors in the database. Made several graphs to display 
+multiple potential relationships between different columns in the database.
+
+In the end a model was made that would predict if the students have or have no taken the exam preparation course based on the student's other factors in the database. 
+2 models were developed, a K nearest neighbors model and a model using logistic regression.
+
+All the results from messing with the database, graphs and the learning models are shown in the notebook and taked about for a bit.
+
+nbviewer of the notebook: https://nbviewer.jupyter.org/github/Cookie182/personal-projects/blob/main/student-performance/student_performance.ipynb
