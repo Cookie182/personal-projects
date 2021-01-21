@@ -161,7 +161,7 @@ print('Positive, Negative for KNeighbours:',
       f1_score(test_y, clf_knn.predict(test_x_vector), average=None, labels=[Sentiment.POSITIVE, Sentiment.NEGATIVE]), '\n')
 
 
-test_set = ['Shit', 'Lit', 'Fookin noice', 'Ridiculous']
+test_set = ['Extremely pleasant', 'Lit', 'Fookin noice', 'Ridiculous']
 new_test = vectorizer.transform(test_set)
 
 
