@@ -22,7 +22,11 @@ def int_to_binary(n, compliment_1s=False, compliment_2s=False):
                 binary_n[x] = '0'
             else:
                 binary_n[x] = '1'
-        return ''.join(binary_n)
+
+        int_1s = 0
+        for _ in range(len(binary_n)):
+            int_1s += (bits[_] * int(binary_n[_]))
+        return f"{''.join(binary_n)} -> {int_1s}"
 
     # convert to 2s compliment
     if compliment_2s == True:
@@ -35,6 +39,7 @@ def int_to_binary(n, compliment_1s=False, compliment_2s=False):
         # sorting out the first bit (from the right) using the +1 carryon
         add_carryone = 0
         first_one = 1
+        int_2s = 0
 
         # adjusting if first bit is 1 and applying +1 carryon and rest of the addition depending on if carryon is again +1 or +0
         if binary_n[-1] == '1':
@@ -57,15 +62,20 @@ def int_to_binary(n, compliment_1s=False, compliment_2s=False):
             # fringe case
             if add_carryone == 1:
                 binary_n.append('1')
-            return ''.join(binary_n)
+
+            for _ in range(len(bits)):
+                int_2s += (bits[_] * int(binary_n[_]))
+            return f"{''.join(binary_n)} -> {int_2s}"
 
         # simple case if first bit (from the right) is 0
         else:
             binary_n[-1] = '1'
             first_one = 0
-            return ''.join(binary_n)
+            for _ in range(len(bits)):
+                int_2s += (bits[_] * int(binary_n[_]))
+            return f"{''.join(binary_n)} -> {int_2s}"
 
-    return ''.join(binary_n)
+    return f"{''.join(binary_n)}"
 
 
 n = int(input("Enter integer: "))
