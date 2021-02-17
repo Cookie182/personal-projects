@@ -19,6 +19,7 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
     """Func that generates train/test data for the classifier/regressor and returns the trained classifer/regressor"""
     df = pd.DataFrame(index=range(1, n+1))  # making the dataframe and generating dummy marks
     df.index.name = 'Student'
+    print("\nGenerating mock data\n")
     for x in range(len(test_type)):
         m = max_mark[x]  # storing max marks for each type of test
         if test_amount[x] > 1:  # generating random marks in marking range with a gaussian weight distribution to each mark
@@ -40,6 +41,7 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
 
     # determining pass/fail
     df['Pass/Fail'] = ["Pass" if x >= pass_percent else "Fail" for x in df['Total %']]
+    print("Generated mock data!\n")
 
     print(f"\nStudents passed -> {len(df[df['Pass/Fail'] == 'Pass'])}\
     \nStudents Failed -> {len(df[df['Pass/Fail'] == 'Fail'])}\n")
@@ -48,6 +50,7 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
     y = df[['Pass/Fail', 'Total %']].copy()
     y['Pass/Fail'] = LabelEncoder().fit_transform(y['Pass/Fail'])
 
+    print("Creating and fitting models\n")
     # making train and test data for models
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, stratify=y['Pass/Fail'])
 
@@ -106,6 +109,7 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
 
     # final overall grade predictor
     overallgrade = make_pipeline(StandardScaler(), LinearRegression(n_jobs=-1)).fit(X_test, y_test['Total %'])
+    print("Models created")
 
     print("LogisticRegressionCV classifer:-")
     print(f"Accuracy -> {round(passfail.score(X_test, y_test['Pass/Fail'])*100, 2)}%")
