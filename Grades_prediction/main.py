@@ -122,27 +122,15 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
     return passfail, overallgrade
 
 
-def teacher_updategrade(subject):  # teacher grading for a subject panel
-    while True:
-        print(f"\nWelcome to the grade updating menu for {subject}\n")
-        print("1. Update all grades for a subject")
-        choice = input("Choice : ")
-        if choice == '1':
-            query = "SHOW COLUMNS FROM " + subject
-            cursor.execute(query)
-            columns = [x[0] for x in cursor.fetchall() if x[0] != 'student_id']  # list of test names for subject
-
-            query = "SELECT * FROM " + subject
-            cursor.execute(query)
-            amount = len(cursor.fetchall())  # no. of students
-
-            for col in columns:
-                print(f"\nTest = {col}\n")
-                for n in range(1, amount+1):
-                    mark = input((f"For student {n} in {col} marks = "))
-                    query = f"UPDATE {subject} set {col} = {mark} where student_id = {n}"
-                    cursor.execute(query)
-                    db.commit()
+def teacher_updategrade(subject, test):  # teacher grading for a subject panel
+    print(f"\nWelcome to the menu to grade {test} for {subject}\n")
+    cursor.execute(f"SELECT * FROM {subject}")
+    n = len(cursor.fetchall())
+    for n in range(1, n+1):
+        score = int(input(f"Student {n} score -> "))
+        cursor.execute(f"UPDATE {subject} SET {test} = '{score}' WHERE student_id = {n}")
+        db.commit()
+    print(f"Grades for {test} in {subject} updated\n")
 
 
 def teacher_session(user):  # teacher panel
@@ -150,7 +138,8 @@ def teacher_session(user):  # teacher panel
         print(f"\nHello {user}, welcome to the teacher menu\n")
         print("1. Review grades")
         print("2. Update test grades")
-        print("3. Logout")
+        print("3. Update a students grades")
+        print("4. Logout")
         choice = input("Option : ")
         if choice == '1':  # look at the grades of students in a subject the teacher manages
             print("Review grades for which subject?\n")
@@ -160,7 +149,7 @@ def teacher_session(user):  # teacher panel
             subjects = list(enumerate(cursor.fetchall()[0][0].split(), start=1))
             for x, y in subjects:
                 print(f"{x}. {y}")
-            sub_choice = int(input("Option : ")) - 1
+            sub_choice = int(input("Option : "))
             cursor.execute("SHOW tables LIKE %s", (subjects[sub_choice - 1][1],))
             if len(cursor.fetchall()) > 0:
                 print(pd.read_sql(subjects[sub_choice - 1][1],
@@ -169,14 +158,15 @@ def teacher_session(user):  # teacher panel
             else:
                 print(f"Grade table for {subjects[sub_choice - 1][1]} does not exist\n")
 
-        elif choice == '2':
-            cursor.execute("SELECT subjects from users WHERE username = %s", (user,))
+        elif choice == '2':  # updating test grades for a particular test in a subject
+            cursor.execute("SELECT subjects from teachers WHERE username = %s", (user,))
             subjects = cursor.fetchall()[0][0].split()
             subjects = list(enumerate(subjects, start=1))
             while True:
                 print('')
                 for x in subjects:
                     print(f"{x[0]}. {x[1]}")
+                print(f"{len(subjects)+1}. Back to teacher menu")
                 choice = input("Choose subject : ")
                 if int(choice) in [x[0] for x in subjects]:
                     cursor.execute("SHOW tables LIKE %s", (subjects[int(choice)-1][1], ))
@@ -184,12 +174,61 @@ def teacher_session(user):  # teacher panel
                     if len(cursor.fetchall()) < 1:  # incase if valid choice for subject is made but table for it does not exist
                         print(f"Table for {subjects[int(choice)-1][1]} does not exist\n")
                     else:
-                        teacher_updategrade(subjects[int(choice)-1][1])
+                        subject = subjects[int(choice)-1][1]
+                        cursor.execute(f"SHOW COLUMNS FROM {subjects[int(choice)-1][1]}")
+                        tests = list(enumerate([x[0] for x in cursor.fetchall() if x[0] != 'student_id'], start=1))
+                        print(f"\nUpdate grades for which test in {subjects[int(choice)-1][1]}\n")
+                        [print(f"{x[0]}. {x[1]}") for x in tests]
+                        print(f"{len(tests)+1}. Go back to previous menu")
+                        choice = input("Option : ")
+                        if int(choice) in range(1, len(tests)+1):  # changing grade of students in a subject for a particular test
+                            teacher_updategrade(subject, tests[int(choice)-1][1])
+
+                        elif int(choice) == len(tests)+1:
+                            print("Going back to previous menu\n")
+                            break
+
+                        else:
+                            print("No valid option entered\n")
+
+                elif int(choice) == len(subjects)+1:
+                    print("Going back to the teacher menu\n")
+                    break
 
                 else:
                     print("Invalid choice\n")
 
-        elif choice == '3':
+        elif choice == '3':  # updating the marks of a student in a test for a subject
+            cursor.execute(f"SELECT subjects FROM teachers WHERE username = '{user}'")
+            subjects = list(enumerate(cursor.fetchall()[0][0].split(), start=1))
+            [print(f"{x[0]}. {x[1]}") for x in subjects]
+            print(f"{len(subjects)+1}. Go back to previous menu")
+            choice = input("Option : ")
+            if int(choice) in [x[0] for x in subjects]:
+                subject = subjects[int(choice)-1][1]
+                cursor.execute(f"SELECT * FROM {subject}")
+                n = len(cursor.fetchall())
+                student_id = int(input("\nID of student whose grade to update : "))
+                if student_id in range(1, n+1):
+                    cursor.execute(f"SHOW COLUMNS FROM {subject}")
+                    tests = list(enumerate([x[0] for x in cursor.fetchall() if x[0] != 'student_id'], start=1))
+                    [print(f"{x[0]}. {x[1]}") for x in tests]
+                    print(f"{len(tests)+1}. Go back to previous menu")
+                    choice = input("Option : ")
+                    if int(choice) in range(1, len(tests)+1):
+                        test = tests[int(choice)-1][1]
+                        marks = int(input(f"\nMarks for student {student_id} : "))
+                        cursor.execute(f"UPDATE {subject} SET {test} = {marks} WHERE student_id = {student_id}")
+                        db.commit()
+                        print(f"{test} marks for student {student_id} in {subject} updated\n")
+                    else:
+                        print("Invalid input for test choice\n")
+                else:
+                    print("Invalid input for student_id\n")
+            else:
+                print("Invalid input for subject choice\n")
+
+        elif choice == '4':
             print("Logging out of teacher account\n")
             break
 
@@ -414,4 +453,5 @@ def main():
             print("Valid input has not been entered\n")
 
 
+# war begins
 main()
