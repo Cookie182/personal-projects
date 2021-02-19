@@ -121,6 +121,8 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
 
     return passfail, overallgrade
 
+def student_auth():
+
 
 def teacher_updategrade(subject, test):  # teacher grading for a subject panel
     print(f"\nWelcome to the menu to grade {test} for {subject}\n")
@@ -139,7 +141,8 @@ def teacher_session(user):  # teacher panel
         print("1. Review grades")
         print("2. Update test grades")
         print("3. Update a students grades")
-        print("4. Logout")
+        print("4. Change account password")
+        print("5. Logout")
         choice = input("Option : ")
         if choice == '1':  # look at the grades of students in a subject the teacher manages
             print("Review grades for which subject?\n")
@@ -229,6 +232,20 @@ def teacher_session(user):  # teacher panel
                 print("Invalid input for subject choice\n")
 
         elif choice == '4':
+            print(f"\nChanging password for {user}\n")
+            cursor.execute(f"SELECT password FROM teachers WHERE username = '{user}'")
+            old_pass = cursor.fetchall()[0][0]
+            inp_old_pass = input("Enter old password : ")
+            if inp_old_pass == old_pass:
+                print("Identity verified\n")
+                inp_new_pass = input("Enter new password : ")
+                cursor.execute(f"UPDATE teachers SET password = '{inp_new_pass}' WHERE username = '{user}'")
+                db.commit()
+                print("Password changed\n")
+            else:
+                print("Incorrect password entered\n")
+
+        elif choice == '5':
             print("Logging out of teacher account\n")
             break
 
@@ -249,6 +266,7 @@ def teacher_auth():  # checking if valid teacher login
 def admin_session():  # admin panel
     print("\nAdmin menu\n")
     while True:
+
         print("1. Register/Edit account")
         print("2. Delete existing account")
         print("3. Show details in table")
@@ -279,7 +297,7 @@ def admin_session():  # admin panel
                     print("\nRegister new STUDENT account\n")
                     user = input("Enter username : ")
                     passw = input("Enter password : ")
-                    cursor.execute("INSERT INTO students (username, password) VALUES (%s, %s)", (user, passw))
+                    cursor.execute("INSERT INTO students_2019 (username, password) VALUES (%s, %s)", (user, passw))
                     db.commit()
                     print(f"{user} has been registered as a student\n")
 
@@ -301,7 +319,7 @@ def admin_session():  # admin panel
 
                 elif choice == '4':  # editing existing student account details
                     print("\nEditing existing STUDENT accoutn\n")
-                    print(pd.read_sql('students', con=create_engine(f"mysql://root:@localhost/{database}").connect()))
+                    print(pd.read_sql('students_2019', con=create_engine(f"mysql://root:@localhost/{database}").connect()))
                     user = input("Enter username : ")
                     edit = input("Enter which detail to edit : ")
                     query = f"SELECT {edit} FROM students WHERE username = '{user}'"
@@ -309,7 +327,7 @@ def admin_session():  # admin panel
                     before_change = cursor.fetchall()[0][0]
 
                     change = input("Enter new detail : ")
-                    query = f"UPDATE students SET {edit} = '{change}' WHERE username = '{user}'"
+                    query = f"UPDATE students_2019 SET {edit} = '{change}' WHERE username = '{user}'"
                     cursor.execute(query)
                     db.commit()
                     print(f"Before -> {before_change}\nNow -> {change}\n")
@@ -441,7 +459,7 @@ def main():
 
         choice = input("Option : ")
         if choice == '1':
-            print("Logging in as student")
+            student_auth()
         elif choice == '2':
             teacher_auth()
         elif choice == '3':
