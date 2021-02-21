@@ -125,6 +125,42 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
     return passfail, overallgrade
 
 
+def student_session(record, user):
+    while True:
+        print("1. View grades")
+        print("2. Change account details")
+        print("3. Logout")
+        choice = input("Choice : ")
+        if choice == '1':
+            print("\nView grades\b")
+            cursor.execute("SELECT id, name FROM subjects")
+            subjects = [x[0] for x in cursor.fetchall()]
+
+
+def student_auth():
+    cursor.execute("SHOW TABLES LIKE 'students%'")
+    records = list(enumerate([x[0] for x in cursor.fetchall() if len(x[0]) < 15], start=1))
+    print("\nWhich record do you belong to?")
+    [print(f"{x[0]}. {x[1]}") for x in records]  # choosing which student record they belong to
+    choice = input("Choice : ")
+    if int(choice) in [x[0] for x in records]:
+        record = records[int(choice)-1][1]
+        print("Login\n")
+        user = input("Enter username : ")  # checking login details
+        passw = input("Enter password : ")
+        cursor.execute(f"SELECT username FROM {record}")
+        if user in [x[0] for x in cursor.fetchall()]:
+            cursor.execute(f"SELECT password FROM {record} WHERE username = '{user}'")
+            if passw == cursor.fetchall()[0][0]:
+                student_session(record, user)
+            else:
+                print("\nImcorrect details, going back\n")
+        else:
+            print("\nIncorrect details, going back\n")
+    else:
+        print("Going back\n")
+
+
 def teacher_session(teacher_id):
     cursor.execute(f"SELECT id FROM subjects WHERE teacher_id = {teacher_id}")
     subjects = list(enumerate([x[0] for x in cursor.fetchall()], start=1))  # keeping a track of this particular teacher's subjects
@@ -769,6 +805,9 @@ def main():
         if choice == '1':
             admin_auth()
 
+        elif choice == '2':
+            student_auth()
+
         elif choice == '3':
             teacher_auth()
 
@@ -777,5 +816,8 @@ def main():
             break
 
 
+cursor.execute("SELECT id, name FROM subjects")
+subjects = [x for x in cursor.fetchall()]
+print(subjects)
 # war begins
 main()
