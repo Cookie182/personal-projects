@@ -1,3 +1,7 @@
+import os
+import math
+import warnings
+import seaborn as sns
 import mysql.connector as mysql
 from sqlalchemy import create_engine
 import numpy as np
@@ -7,14 +11,19 @@ import scipy.stats as ss
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split, RepeatedStratifiedKFold
 from sklearn.metrics import f1_score, plot_confusion_matrix
-from sklearn.linear_model import LinearRegression, LogisticRegressionCV, LogisticRegression
+from sklearn.linear_model import LinearRegression, LogisticRegressionCV
 from sklearn.pipeline import make_pipeline
-import os
+from matplotlib import pyplot as plt
+from matplotlib.gridspec import GridSpec as gs
+plt.style.use('bmh')
+sns.set_style('dark')
+warnings.filterwarnings('ignore')
 
 
-path = "C:/xampp/mysql/data/btechcse"
+""" MAKE SURE THE VALUES FOR THE 4 BOTTOM LINES ARE CORRECT FOR YOU """
+path = "C:/xampp/mysql/data/btechcse"  # path to database and to store prediction models
 database = input("Which database to look at? : ")  # choosing which database to access (btechcse)
-db = mysql.connect(host='localhost', user='Ashwin', password='3431', database=database)  # initializing
+db = mysql.connect(host='localhost', user='Ashwin', password='3431', database=database)  # initializing connection to database
 cursor = db.cursor(buffered=True)  # cursor
 
 
@@ -125,16 +134,166 @@ def grades(test_type, test_amount, max_mark, weightage, pass_percent, final_test
     return passfail, overallgrade
 
 
+def rolling_predict(marks, subject, record):  # to present rolling predictions based on a student's marks
+    # loading subject prediction models
+    passfail = pickle.load(open(f"{path}/{subject}_passfail", 'rb'))
+    overallgrade = pickle.load(open(f"{path}/{subject}_overallgrade", 'rb'))
+
+    dummy = [0] * len(marks[0])  # making dummy list to cummulatively add each test score
+    pass_probabs = []  # to store each probability as each test score gets entered
+    for x in range(len(marks[0])):
+        dummy[x] = marks[0][x]
+        pass_probabs.append(passfail.predict_proba(np.array([dummy]))[0][1] * 100)
+
+    limit1 = math.ceil(max([abs(x - 50) for x in pass_probabs]))  # limits determiend to scale the pass/fail graph better
+
+    pf = None  # predicting if in the end the model predicts student failing or passing
+    if passfail.predict(marks) == 0:
+        pf = 'Fail'
+    else:
+        pf = 'Pass'
+
+    dummy = [0] * len(marks[0])  # calculating rolling overall mark percentage
+    total_percent = []
+    for x in range(len(marks[0])):
+        dummy[x] = marks[0][x]
+        total_percent.append(round(overallgrade.predict(np.array(dummy).reshape(1, -1))[0]*100, 3))
+
+    limit2 = math.ceil(max([abs(x-60) for x in total_percent]))  # limits determined to scale the overall grade graph better
+
+    # calculating grade
+    grade_p = overallgrade.predict(marks)[0]*100
+    grade = None
+    if grade_p >= 90:
+        grade = "A+"
+    elif grade_p >= 80:
+        grade = "A"
+    elif grade_p >= 70:
+        grade = "B"
+    elif grade_p >= 60:
+        grade = "C"
+    elif grade_p >= 50:
+        grade = "D"
+    else:
+        grade = "F"
+
+    # getting the name of tests used for predictions
+    cursor.execute(f"DESCRIBE {record}_{subject}")
+    tests = [x[0] for x in cursor.fetchall()][1:-3]
+
+    fig = plt.figure(figsize=(14, 7))
+    grid = gs(nrows=1, ncols=2, figure=fig)
+    plt.suptitle(
+        f'Chance of Passing and Predicted Total Grade for {subject}\nBe warned, these numbers are not supposed to be an extremely accurate representation of your future')
+
+    ax1 = fig.add_subplot(grid[:1])
+    plt.title(f"Probability of passing the subject after each test taken\nPredicted Pass or Fail? -> {pf}\
+    \nChance of passing subject -> {passfail.predict_proba(marks)[0][1] * 100:.2f}%", fontsize=14)
+    plt.plot(tests, pass_probabs, c='black', linestyle='--', label='Predicted passing chance')
+    plt.axhline(50, color='r', label="Threshold")
+    plt.xticks(rotation=45)
+    plt.ylabel('Probability (%)')
+    plt.ylim(ymin=50-limit1, ymax=50+limit1)
+    plt.margins(0.02, 0.02)
+    plt.legend(loc='best')
+    plt.tight_layout()
+
+    ax2 = fig.add_subplot(grid[1:])
+    plt.title(f"Predicting Overall grade after each test\nPredicted Overall Subject Grade -> {grade_p:.2f}%\
+    \nPredicted Grade -> {grade}",
+              fontsize=14)
+    plt.plot(tests, total_percent, c='black', linestyle='--', label='Predicted Overall grade')
+    plt.axhline(60, color='r', label='Passing Threshold')
+    plt.xticks(rotation=45)
+    plt.ylabel('Final Grade')
+    plt.margins(x=0.01, y=0.01)
+    plt.ylim(ymin=60-limit2, ymax=60+limit2)
+    plt.margins(0.02, 0.02)
+    plt.legend(loc='best')
+    plt.tight_layout()
+    plt.show()
+
+    print("\nDetailed predictions for marks shown\n")
+
+
 def student_session(record, user):
     while True:
-        print("1. View grades")
-        print("2. Change account details")
-        print("3. Logout")
+        print("\n1. View grades")
+        print("2. View account details")
+        print("3. Change account details")
+        print("4. Logout")
         choice = input("Choice : ")
-        if choice == '1':
+        if choice == '1':  # view grades of a subject
             print("\nView grades\b")
             cursor.execute("SELECT id, name FROM subjects")
-            subjects = [x[0] for x in cursor.fetchall()]
+            subjects = list(enumerate([x[0] for x in cursor.fetchall()], start=1))
+            [print(f"{x[0]}. {x[1]}") for x in subjects]  # choosing subject
+            print(f"{len(subjects)+1}. Go back")
+            choice = input("Choice : ")
+            if int(choice) in [x[0] for x in subjects]:
+                subject = subjects[int(choice)-1][1]
+                cursor.execute(f"SELECT id FROM {record} WHERE username = '{user}'")
+                id = cursor.fetchall()[0][0]
+                cursor.execute(f"DESCRIBE {record}_{subject}")
+                tests = [x[0] for x in cursor.fetchall() if x[0] != 'student_id']
+                print("")
+                for test in tests:  # printing marks on a subject for each test
+                    cursor.execute(f"SELECT {test} FROM {record}_{subject} WHERE student_id = {id}")
+                    print(f"{test} -> {cursor.fetchall()[0][0]}")
+
+                marks = []  # storing marks of student
+                print("\n1. View more info")  # to show prediction result graphs
+                print("2. Go back")
+                choice = input("Choice : ")
+                if choice == '1':
+                    cursor.execute(f"DESCRIBE {record}_{subject}")
+                    tests = [x[0] for x in cursor.fetchall()][1:-3]
+                    for test in tests:  # iterating and getting marks for tests except for the final test
+                        cursor.execute(f"SELECT {test} FROM {record}_{subject} WHERE student_id = {id}")
+                        marks.append(cursor.fetchall()[0][0])
+                    marks = np.array(marks).reshape(1, -1)  # prepping data to be used for predictions
+                    rolling_predict(marks, subject, record)
+                    print(f"\nMarks displayed for {user} in {subject}\n")
+                else:
+                    print("\nGoing back\n")
+            else:
+                print("\nGoing back\n")
+                continue
+
+        elif choice == '2':  # showing student account details
+            print("\nShowing account details\n")
+            cursor.execute(f"DESCRIBE {record}")
+            cols = [x[0] for x in cursor.fetchall()]
+            for col in cols:
+                cursor.execute(f"SELECT {col} FROM {record} WHERE username = '{user}'")
+                print(f"{col} -> {cursor.fetchall()[0][0]}")
+            print(f"\nAccount details for username {user} shown\n")
+
+        elif choice == '3':  # changing detail in student account
+            print(f"\nChanging account details for {user}\n")
+            cursor.execute(f"DESCRIBE {record}")
+            cols = list(enumerate([x[0] for x in cursor.fetchall() if x[0] not in ["id", "email", "username"]], start=1))
+            [print(f"{x[0]}. {x[1]}") for x in cols]
+            print(f"{len(cols)+1} Go back")
+            choice = input("Choice : ")
+            if int(choice) in [x[0] for x in cols]:
+                col = cols[int(choice)-1][1]
+                cursor.execute(f"SELECT {col} FROM {record} WHERE username = '{user}'")
+                old_detail = cursor.fetchall()[0][0]
+                new_detail = input(f"\nOld {col} -> {old_detail}\nEnter new {col} : ")
+                cursor.execute(f"UPDATE {record} SET {col} = '{new_detail}' WHERE username = '{user}'")
+                db.commit()
+                print(f"{user} {col} changed from {old_detail} to {new_detail}\n")
+            else:
+                print("Going back\n")
+                continue
+
+        elif choice == '4':
+            print("Logging out\n")
+            break
+
+        else:
+            print("Enter valid choice\n")
 
 
 def student_auth():
@@ -145,7 +304,7 @@ def student_auth():
     choice = input("Choice : ")
     if int(choice) in [x[0] for x in records]:
         record = records[int(choice)-1][1]
-        print("Login\n")
+        print("\nStudent Login\n")
         user = input("Enter username : ")  # checking login details
         passw = input("Enter password : ")
         cursor.execute(f"SELECT username FROM {record}")
@@ -816,8 +975,5 @@ def main():
             break
 
 
-cursor.execute("SELECT id, name FROM subjects")
-subjects = [x for x in cursor.fetchall()]
-print(subjects)
 # war begins
 main()
