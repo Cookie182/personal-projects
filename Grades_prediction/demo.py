@@ -13,7 +13,7 @@ import os
 
 
 path = "C:/xampp/mysql/data/btechcse"
-database = input("Which database to look at? : ")  # choosing which database to access
+database = input("Which database to look at? : ")  # choosing which database to access (btechcse)
 db = mysql.connect(host='localhost', user='Ashwin', password='3431', database=database)  # initializing
 cursor = db.cursor(buffered=True)  # cursor
 
