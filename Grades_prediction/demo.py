@@ -559,12 +559,13 @@ def admin_session():
                 year = input("Enter what year to make a students table for : ")
 
                 print("\nCreating teacher table")
-                cursor.execute("CREATE TABLE btechcse.teachers (teacher_id INT(5) NOT NULL AUTO_INCREMENT , first_name VARCHAR(30) NOT NULL , last_name VARCHAR(30) NOT NULL , username VARCHAR(20) NOT NULL , password VARCHAR(20) NOT NULL , PRIMARY KEY (teacher_id), UNIQUE (username))")
+                cursor.execute(
+                    f"CREATE TABLE {database}.teachers (teacher_id INT(5) NOT NULL AUTO_INCREMENT , first_name VARCHAR(30) NOT NULL , last_name VARCHAR(30) NOT NULL , username VARCHAR(20) NOT NULL , password VARCHAR(20) NOT NULL , PRIMARY KEY (teacher_id), UNIQUE (username))")
                 db.commit()
 
                 print("\nCreating subjects table")
                 cursor.execute(
-                    "CREATE TABLE btechcse.subjects (id VARCHAR(10) NOT NULL , name TEXT NOT NULL ,semester INT(2) NOT NULL , teacher_id INT(5) NULL , PRIMARY KEY (`id`), INDEX (`teacher_id`)) ENGINE = InnoDB")
+                    f"CREATE TABLE {database}.subjects (id VARCHAR(10) NOT NULL , name TEXT NOT NULL ,semester INT(2) NOT NULL , teacher_id INT(5) NULL , PRIMARY KEY (`id`), INDEX (`teacher_id`)) ENGINE = InnoDB")
                 db.commit()
 
                 # creating foreign key for subjects and teachers for teacher_id
@@ -574,7 +575,7 @@ def admin_session():
 
                 print("\nCreating students table")
                 cursor.execute(
-                    f"CREATE TABLE btechcse.students_{year}(id INT(5) NOT NULL AUTO_INCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, mobile_no VARCHAR(15) DEFAULT NULL, email VARCHAR(40) DEFAULT NULL, username VARCHAR(20) NOT NULL, password VARCHAR(20) NOT NULL, PRIMARY KEY(id), UNIQUE (username))")
+                    f"CREATE TABLE {database}.students_{year}(id INT(5) NOT NULL AUTO_INCREMENT, first_name TEXT NOT NULL, last_name TEXT NOT NULL, mobile_no VARCHAR(15) DEFAULT NULL, email VARCHAR(40) DEFAULT NULL, username VARCHAR(20) NOT NULL, password VARCHAR(20) NOT NULL, PRIMARY KEY(id), UNIQUE (username))")
                 db.commit()
                 print(f"\nstudents_{year}, teachers and subjects table successfully created\n")
 
